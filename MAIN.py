@@ -4,12 +4,14 @@ from ultralytics import YOLO
 import numpy as np
 
 import math
-
+import cvzone
 from deep_sort.deep_sort.tracker import Tracker as DeepSortTracker
 from deep_sort.tools import generate_detections as gdet
 from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.detection import Detection
-import numpy as np
+
+
+import torch
 
 #optimized tracker class
 class Tracker:
@@ -77,11 +79,12 @@ class Track:
 
 
 
-import torch
+
 torch.cuda.set_device(0)
 
-model=YOLO('best.pt')
-
+model=YOLO("best.engine", task="detect") #tensorrt optimized model
+#model = YOLO("best.pt")
+#model.to('cuda')
 
 #def RGB(event, x, y, flags, param):
 #    if event == cv2.EVENT_MOUSEMOVE :  
@@ -120,14 +123,15 @@ while True:
     ret,frame = cap.read()
     if not ret:
        break
-   
+   # print(f"Frame size: {frame.shape}")  # prints the size of the frame
+ 
 
     count += 1
-    if count % 6 != 0: #skip more frames , reducing the load
+    if count % 3 != 0: 
         continue
-    frame=cv2.resize(frame,(800, 416)) #reduce the resolution
-    results=model.predict(frame)
-    #print(results)
+    frame=cv2.resize(frame,(1020, 500)) #reduce the resolution
+    #results=model.predict(frame)
+    results = model(frame, imgsz=800)
     a = results[0].boxes.data
     a_cpu = a.cpu().numpy()
     px = pd.DataFrame(a_cpu).astype("float")
@@ -170,7 +174,8 @@ while True:
         cy=int(y3+y4)//2
         if cy1<(cy+offset) and cy1>(cy-offset):
            cv2.rectangle(frame, (int(x3), int(y3)), (int(x4), int(y4)), (0, 255, 0), 2)
-           #cvzone.putTextRect(frame, f'{id}', (int(x3), int(y3)), 1, 1)
+           cvzone.putTextRect(frame, f'{id}', (int(x3), int(y3)), 1, 1)
+           #cv2.putText(frame, f'{id}', (int(x3),int(y3)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
            if bus.count(id)==0:
               bus.append(id)
 #CAR
@@ -182,7 +187,8 @@ while True:
         cy2=int(y5+y6)//2
         if cy1<(cy2+offset) and cy1>(cy2-offset):
            cv2.rectangle(frame, (int(x5), int(y5)), (int(x6), int(y6)), (0, 255, 0), 2)
-          # cvzone.putTextRect(frame, f'{id1}', (int(x5), int(y5)), 1, 1)
+           cvzone.putTextRect(frame, f'{id1}', (int(x5), int(y5)), 1, 1)
+           #cv2.putText(frame, f'{id1}', (int(x5),int(y5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
            if car.count(id1)==0:
               car.append(id1)
 #auto-rikshaw
@@ -194,7 +200,8 @@ while True:
         cy3=int(y7+y8)//2
         if cy1<(cy3+offset) and cy1>(cy3-offset):
            cv2.rectangle(frame, (int(x7), int(y7)), (int(x8), int(y8)), (0, 255, 0), 2)
-           #cvzone.putTextRect(frame,f'{id2}',(int(x7),int(y7)),1,1)
+           cvzone.putTextRect(frame,f'{id2}',(int(x7),int(y7)),1,1)
+           #cv2.putText(frame, f'{id2}', (int(x7), int(y7)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
            if auto_rikshaw.count(id2)==0:
               auto_rikshaw.append(id2)
 #motorcycle
@@ -206,20 +213,26 @@ while True:
         cy4=int(y9+y10)//2
         if cy1<(cy4+offset) and cy1>(cy4-offset):
            cv2.rectangle(frame, (int(x9), int(y9)), (int(x10), int(y10)), (0, 255, 0), 2)
-           #cvzone.putTextRect(frame, f'{id3}', (int(x9), int(y9)), 1, 1)
+           cvzone.putTextRect(frame, f'{id3}', (int(x9), int(y9)), 1, 1)
+          # cv2.putText(frame, f'{id3}', (int(x9),int(y9)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
            if motorcycle.count(id3)==0:
               motorcycle.append(id3)          
     countbus=(len(bus))
     countcar=(len(car))
     countauto_rikshaw=(len(auto_rikshaw))
     countmotorcycle=(len(motorcycle))
-    #cvzone.putTextRect(frame,f'Auto_Rikshaw : {countauto_rikshaw}',(50,60),scale=2,thickness=2,colorR=(0,0,255))
-    #cvzone.putTextRect(frame,f'Bus : {countbus}',(50,120),scale=2,thickness=2,colorR=(0,0,255))
-    #cvzone.putTextRect(frame,f'Car : {countcar}',(50,180),scale=2,thickness=2,colorR=(0,0,255))
-    #cvzone.putTextRect(frame,f'MotorCycle : {countmotorcycle}',(50,240),scale=2,thickness=2,colorR=(0,0,255))
+    #cv2.putText(frame, f'Auto_Rikshaw: {countauto_rikshaw}', (50, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    #cv2.putText(frame, f'Bus: {countbus}', (50, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    #cv2.putText(frame, f'Car: {countcar}', (50, 180), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+   # cv2.putText(frame, f'Motorcycle: {countmotorcycle}', (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cvzone.putTextRect(frame,f'Auto_Rikshaw : {countauto_rikshaw}',(50,60),scale=2,thickness=2,colorR=(0,0,255))
+    cvzone.putTextRect(frame,f'Bus : {countbus}',(50,120),scale=2,thickness=2,colorR=(0,0,255))
+    cvzone.putTextRect(frame,f'Car : {countcar}',(50,180),scale=2,thickness=2,colorR=(0,0,255))
+    cvzone.putTextRect(frame,f'MotorCycle : {countmotorcycle}',(50,240),scale=2,thickness=2,colorR=(0,0,255))
 
 
     cv2.line(frame,(405,427),(580,427),(255,255,255),2)
+    
     cv2.imshow("RGB", frame)
     if cv2.waitKey(1)&0xFF==27:
         break
